@@ -1,6 +1,9 @@
 import org.json.*;
 
 SpaceShip spaceship;
+private static final int ASTEROIDS_NUM = 20;
+ArrayList<Asteroid> asteroids = new ArrayList<Asteroid>();
+ArrayList<Asteroid> deleteList = new ArrayList<Asteroid>();
 
 private boolean upKey = false;
 private boolean downKey = false;
@@ -8,18 +11,31 @@ private boolean leftKey = false;
 private boolean rightKey = false;
 private boolean ctrlKey = false;
 
+public int lives = 3;
+
 Stars stars = new Stars();
 
 public void setup() 
 {
-  size(500,500);
+  size(800,800);
 
   stars.generate();
+
+  for(int i = 0; i < ASTEROIDS_NUM; i++)
+  {
+    asteroids.add(new Asteroid((int)(Math.random() * width), (int)(Math.random() * height)));
+  }
   
   spaceship = new SpaceShip();
 }
 public void draw() 
 {
+  for(Asteroid a : deleteList)
+  {
+    asteroids.remove(a);
+  }
+  deleteList = new ArrayList<Asteroid>();
+
   if(upKey)
     spaceship.accelerate(0.02);
   if(leftKey)
@@ -30,6 +46,12 @@ public void draw()
   background(0);
 
   stars.showAll();
+
+  for(Asteroid a : asteroids)
+  {
+    a.move();
+    a.show();
+  }
 
   spaceship.move();
   spaceship.show();
@@ -80,7 +102,7 @@ class Stars
 
   public void generate()
   {
-    this.stars = new Star[(int)(Math.random() * 50) + 75];
+    this.stars = new Star[(int)(Math.random() * 50) + 50];
     for(int i = 0; i < this.stars.length; i++)
     {
       this.stars[i] = new Star(Math.random() * width, Math.random() * height, (Math.random() * 10) + 5);
@@ -89,6 +111,9 @@ class Stars
 
   public void showAll()
   {
+    fill(0,0,0,0);
+    strokeWeight(0.5);
+    stroke(200);  
     for(int i = 0; i < this.stars.length; i++)
     {
       this.stars[i].show();
@@ -110,18 +135,25 @@ class Star
   }
   public void show()
   {
-    fill(0,0,0,0);
-    strokeWeight(0.5);
-    stroke(200);  
+    beginShape();         
+    vertex((float)posX - 4, (float)posY + 0);
+    vertex((float)posX - 1, (float)posY + 1);
+    vertex((float)posX + 0, (float)posY + 4);
+    vertex((float)posX + 1, (float)posY + 1);
+    vertex((float)posX + 4, (float)posY + 0);
+    vertex((float)posX + 1, (float)posY - 1);
+    vertex((float)posX - 0, (float)posY - 4);
+    vertex((float)posX - 1, (float)posY - 1);
+    endShape(CLOSE);
 
-    arc((float)posX, (float)posY, (float)size, (float)size, 0, PI / 2.0);
-    arc((float)(posX + size), (float)posY, (float)size, (float)size, PI / 2.0, PI);
-    arc((float)(posX + size), (float)(posY + size), (float)size, (float)size, PI, PI * 1.5);
-    arc((float)posX, (float)(posY + size), (float)size, (float)size, PI * 1.5, PI * 2.0);
+    //arc((float)posX, (float)posY, (float)size, (float)size, 0, PI / 2.0);
+    //arc((float)(posX + size), (float)posY, (float)size, (float)size, PI / 2.0, PI);
+    //arc((float)(posX + size), (float)(posY + size), (float)size, (float)size, PI, PI * 1.5);
+    //arc((float)posX, (float)(posY + size), (float)size, (float)size, PI * 1.5, PI * 2.0);
   }
 }
 
-class SpaceShip extends Floater  
+class SpaceShip extends BetterFloater  
 {   
   private boolean drawAcceleration = false;
 
@@ -153,17 +185,10 @@ class SpaceShip extends Floater
     }
   }
 
-  //I've given up on commenting so good luck
-  public void setX(int x) {this.myCenterX = x;} 
-  public int getX() {return (int)this.myCenterX;}
-  public void setY(int y) {this.myCenterY = y;}
-  public int getY() {return (int)this.myCenterY;}
-  public void setDirectionX(double x) {this.myDirectionX = x;}
-  public double getDirectionX() {return this.myDirectionX;}
-  public void setDirectionY(double y) {this.myDirectionY = y;}
-  public double getDirectionY() {return this.myDirectionY;}
-  public void setPointDirection(int degrees) {this.myPointDirection = degrees;}
-  public double getPointDirection() {return this.myPointDirection;}
+  public void crash()
+  {
+
+  }
 
   public void accelerate (double dAmount)   
   {   
@@ -177,10 +202,16 @@ class SpaceShip extends Floater
 
     setX((int)(Math.random() * width));
     setY((int)(Math.random() * height));
-    setDirectionX(0);
-    setDirectionY(0);
+    setDirectionX((Math.random() * 0.4) - 0.2);
+    setDirectionY((Math.random() * 0.4) - 0.2);
     setPointDirection((int)(Math.random() * 360));
 
+    asteroids = new ArrayList<Asteroid>();
+
+    for(int i = 0; i < ASTEROIDS_NUM; i++)
+    {
+      asteroids.add(new Asteroid((int)(Math.random() * width), (int)(Math.random() * height)));
+    }
     stars.generate();
   }
 
@@ -192,17 +223,22 @@ class SpaceShip extends Floater
 
     double dRadians = myPointDirection*(Math.PI/180);
 
-    showAtRelPos(-width, -height, dRadians);
-    showAtRelPos(-width, 0, dRadians);
-    showAtRelPos(-width, height, dRadians);
-
-    showAtRelPos(0, -height, dRadians);
     showAtRelPos(0, 0, dRadians);
-    showAtRelPos(0, height, dRadians);
 
-    showAtRelPos(width, -height, dRadians);
-    showAtRelPos(width, 0, dRadians);
-    showAtRelPos(width, height, dRadians);
+    if(myCenterX < 10 || myCenterX > width - 10 || myCenterY < 10 || myCenterY > height - 10) //If near edge of screen
+    {
+      showAtRelPos(-width, -height, dRadians);
+      showAtRelPos(-width, 0, dRadians);
+      showAtRelPos(-width, height, dRadians);
+
+      showAtRelPos(0, -height, dRadians);
+      
+      showAtRelPos(0, height, dRadians);
+
+      showAtRelPos(width, -height, dRadians);
+      showAtRelPos(width, 0, dRadians);
+      showAtRelPos(width, height, dRadians);
+    }
 
     if(hyperspaceCooldown > 0)
     {
@@ -214,19 +250,8 @@ class SpaceShip extends Floater
     }
 
     drawAcceleration = false;
-  } 
-
-  private double getRotatedX(double x, double y, double dRadians)
-  {
-    return (x * Math.cos(dRadians)) - (y * Math.sin(dRadians));
-  }
-
-  private double getRotatedY(double x, double y, double dRadians)
-  {
-    return (x * Math.sin(dRadians)) + (y * Math.cos(dRadians));
-  }
-
-  private void showAtRelPos(int relX, int relY, double dRadians)
+  }   
+  private void showAtRelPos(int relX, int relY, double dRadians) //TODO: FIX THE ACCELERATION DRAWING
   {
     //convert degrees to radians for sin and cos         
                      
@@ -247,7 +272,127 @@ class SpaceShip extends Floater
       line((float)(getRotatedX(-8, 0, dRadians) + myCenterX + relX), (float)(getRotatedY(-8, 0, dRadians) + myCenterY + relY), (float)(getRotatedX(-13, 0, dRadians) + myCenterX + relX), (float)(getRotatedY(-13, 0, dRadians) + myCenterY + relY));
       line((float)(getRotatedX(-8, -2, dRadians) + myCenterX + relX), (float)(getRotatedY(-8, -2, dRadians) + myCenterY + relY), (float)(getRotatedX(-12, -3, dRadians) + myCenterX + relX), (float)(getRotatedY(-12, -3, dRadians) + myCenterY + relY));
     }
-  }  
+  }
+}
+
+class Asteroid extends BetterFloater
+{
+  private double rotationSpeed;
+
+  public Asteroid(int x, int y)
+  {
+    myCenterX = x;
+    myCenterY = y;
+
+    setDirectionX((Math.random() * 0.8) - 0.4);
+    setDirectionY((Math.random() * 0.8) - 0.4);
+
+    rotationSpeed = (Math.random() * 10) - 5;
+
+    JSON properties = JSON.load(dataPath("graphics.json")).getArray("asteroid");
+    
+    //Load color
+    JSON c = ((JSON)properties.getObject(0)).getArray("color");
+    this.myColor = color(((JSON)c.getObject(0)).getInt("r"), ((JSON)c.getObject(1)).getInt("g"), ((JSON)c.getObject(2)).getInt("b"));
+    //This is why I hate java. ^ (again)
+
+    //Load vertices
+    JSON v = ((JSON)properties.getObject(1)).getArray("vertices");
+    corners = ((JSON)v.getObject(0)).getInt("verticesNumber");
+    xCorners = new int[corners];
+    yCorners = new int[corners];
+
+    for(int i = 0; i < corners; i++)
+    {
+      JSON vert = ((JSON)v.getObject(i + 1)).getArray("vertex");
+      xCorners[i] = (int)(1.5 * ((JSON)vert.getObject(0)).getInt("x"));
+      yCorners[i] = (int)(1.5 * ((JSON)vert.getObject(1)).getInt("y"));
+    }
+  }
+
+  public void move()
+  {
+    super.move();
+    rotate((int)rotationSpeed);
+
+    if(dist((float)myCenterX, (float)myCenterY, (float)spaceship.getX(), (float)spaceship.getY()) < 35)
+    {
+      deleteList.add(this);
+      spaceship.crash();
+    }
+  }
+
+  public double getRotation()
+  {
+    return rotationSpeed;
+  }
+
+  public void setRotation(double r)
+  {
+    rotationSpeed = r;
+  }
+}
+
+class BetterFloater extends Floater
+{
+  //I've given up on commenting so good luck
+  public void setX(int x) {this.myCenterX = x;} 
+  public int getX() {return (int)this.myCenterX;}
+  public void setY(int y) {this.myCenterY = y;}
+  public int getY() {return (int)this.myCenterY;}
+  public void setDirectionX(double x) {this.myDirectionX = x;}
+  public double getDirectionX() {return this.myDirectionX;}
+  public void setDirectionY(double y) {this.myDirectionY = y;}
+  public double getDirectionY() {return this.myDirectionY;}
+  public void setPointDirection(int degrees) {this.myPointDirection = degrees;}
+  public double getPointDirection() {return this.myPointDirection;}
+
+  public void show()
+  {
+    fill(0,0,0,0);
+    strokeWeight(1);
+    stroke(myColor);   
+
+    double dRadians = myPointDirection*(Math.PI/180);
+
+    showAtRelPos(-width, -height, dRadians);
+    showAtRelPos(-width, 0, dRadians);
+    showAtRelPos(-width, height, dRadians);
+
+    showAtRelPos(0, -height, dRadians);
+    showAtRelPos(0, 0, dRadians);
+    showAtRelPos(0, height, dRadians);
+
+    showAtRelPos(width, -height, dRadians);
+    showAtRelPos(width, 0, dRadians);
+    showAtRelPos(width, height, dRadians);
+  }
+
+  protected double getRotatedX(double x, double y, double dRadians)
+  {
+    return (x * Math.cos(dRadians)) - (y * Math.sin(dRadians));
+  }
+
+  protected double getRotatedY(double x, double y, double dRadians)
+  {
+    return (x * Math.sin(dRadians)) + (y * Math.cos(dRadians));
+  }
+
+  private void showAtRelPos(int relX, int relY, double dRadians)
+  {
+    //convert degrees to radians for sin and cos         
+                     
+    float xRotatedTranslated, yRotatedTranslated;    
+    beginShape();         
+    for(int nI = 0; nI < corners; nI++)    
+    {     
+      //rotate and translate the coordinates of the floater using current direction 
+      xRotatedTranslated = (float)(getRotatedX(xCorners[nI], yCorners[nI], dRadians)+(myCenterX + relX));     
+      yRotatedTranslated = (float)(getRotatedY(xCorners[nI], yCorners[nI], dRadians)+(myCenterY + relY));      
+      vertex(xRotatedTranslated,yRotatedTranslated);
+    }   
+    endShape(CLOSE);
+  }
 }
 
 abstract class Floater //Do NOT modify the Floater class! Make changes in the SpaceShip class 
